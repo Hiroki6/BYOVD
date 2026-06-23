@@ -1,6 +1,6 @@
 # BYOVD Collection
 
-A collection of proof-of-concept BYOVD (Bring Your Own Vulnerable Driver) tools demonstrating kernel-level exploitation techniques on Windows.
+A collection of BYOVD (Bring Your Own Vulnerable Driver) PoCs that demonstrate kernel-level exploitation techniques on Windows.
 
 ## Disclaimer
 
