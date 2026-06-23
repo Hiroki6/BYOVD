@@ -31,26 +31,29 @@ DWORD64 GetCIBaseAddress(void) {
 }
 
 BOOL IsHVCIEnabled(void) {
-    HKEY  hKey;
-    DWORD val = 0, sz = sizeof(val);
+    typedef LONG (WINAPI* PNtQuerySystemInformation)(
+        ULONG SystemInformationClass,
+        PVOID SystemInformation,
+        ULONG SystemInformationLength,
+        PULONG ReturnLength
+    );
+    typedef struct { ULONG Length; ULONG CodeIntegrityOptions; } SYS_CI_INFO;
 
-    if (RegOpenKeyExA(HKEY_LOCAL_MACHINE,
-        "SYSTEM\\CurrentControlSet\\Control\\DeviceGuard",
-        0, KEY_READ, &hKey) == ERROR_SUCCESS) {
-        RegQueryValueExA(hKey, "EnableVirtualizationBasedSecurity", NULL, NULL, (PBYTE)&val, &sz);
-        RegCloseKey(hKey);
-        if (val) return TRUE;
-    }
+#define SystemCodeIntegrityInformation   103
+#define CODEINTEGRITY_HVCI_KMCI_ENABLED  0x400
 
-    if (RegOpenKeyExA(HKEY_LOCAL_MACHINE,
-        "SYSTEM\\CurrentControlSet\\Control\\DeviceGuard\\Scenarios\\HypervisorEnforcedCodeIntegrity",
-        0, KEY_READ, &hKey) == ERROR_SUCCESS) {
-        RegQueryValueExA(hKey, "Enabled", NULL, NULL, (PBYTE)&val, &sz);
-        RegCloseKey(hKey);
-        if (val) return TRUE;
-    }
+    HMODULE ntdll = GetModuleHandleA("ntdll.dll");
+    if (!ntdll) return FALSE;
 
-    return FALSE;
+    PNtQuerySystemInformation NtQSI =
+        (PNtQuerySystemInformation)GetProcAddress(ntdll, "NtQuerySystemInformation");
+    if (!NtQSI) return FALSE;
+
+    SYS_CI_INFO ci = { sizeof(ci) };
+    if (NtQSI(SystemCodeIntegrityInformation, &ci, sizeof(ci), NULL) != 0)
+        return FALSE;
+
+    return (ci.CodeIntegrityOptions & CODEINTEGRITY_HVCI_KMCI_ENABLED) != 0;
 }
 
 ULONG_PTR getPTEForVA(ULONG_PTR pteBase, ULONG_PTR address) {

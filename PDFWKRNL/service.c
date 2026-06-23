@@ -46,26 +46,3 @@ BOOL LoadDriver(const char* driverPath, const char* serviceName) {
     return TRUE;
 }
 
-BOOL UnloadDriver(const char* serviceName) {
-    SC_HANDLE hSCM = OpenSCManagerA(NULL, NULL, SC_MANAGER_CONNECT);
-    if (!hSCM) {
-        fprintf(stderr, "[-] OpenSCManager failed: %lu\n", GetLastError());
-        return FALSE;
-    }
-
-    SC_HANDLE hService = OpenServiceA(hSCM, serviceName, SERVICE_STOP | DELETE);
-    if (!hService) {
-        fprintf(stderr, "[-] OpenService failed: %lu\n", GetLastError());
-        CloseServiceHandle(hSCM);
-        return FALSE;
-    }
-
-    SERVICE_STATUS ss;
-    ControlService(hService, SERVICE_CONTROL_STOP, &ss);
-    DeleteService(hService);
-
-    printf("[+] Driver service '%s' stopped and deleted.\n", serviceName);
-    CloseServiceHandle(hService);
-    CloseServiceHandle(hSCM);
-    return TRUE;
-}

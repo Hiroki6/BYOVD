@@ -13,10 +13,10 @@ int main(int argc, char** argv) {
     const char* driverPath  = argv[1];
     const char* serviceName = argv[2];
 
-    //if (IsHVCIEnabled()) {
-    //    printf("[-] HVCI is enabled - kernel memory is not writable, aborting.\n");
-    //    return 0;
-    //}
+    if (IsHVCIEnabled()) {
+        fprintf(stderr, "[-] HVCI is enabled - kernel memory is not writable, aborting.\n");
+        return 0;
+    }
     printf("[*] HVCI is disabled.\n");
 
     HANDLE device = OpenDevice();
@@ -29,7 +29,6 @@ int main(int argc, char** argv) {
         CloseHandle(device);
         return 1;
     }
-    printf("[+] DSE disabled and reverted successfully.\n");
 
     CloseHandle(device);
     return 0;
