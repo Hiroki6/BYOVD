@@ -1,0 +1,19 @@
+# Visual Studio IDE
+.vs/
+*.vcxproj.user
+*.suo
+*.ipch
+
+# Build outputs
+x64/
+*/x64/
+*.obj
+*.pdb
+*.exe
+*.ilk
+*.idb
+*.ipdb
+*.iobj
+*.log
+*.recipe
+*.tlog
