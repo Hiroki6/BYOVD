@@ -13,10 +13,10 @@ int main(int argc, char** argv) {
     const char* driverPath  = argv[1];
     const char* serviceName = argv[2];
 
-    if (IsHVCIEnabled()) {
-        printf("[-] HVCI is enabled — kernel memory is not writable, aborting.\n");
-        return 0;
-    }
+    //if (IsHVCIEnabled()) {
+    //    printf("[-] HVCI is enabled - kernel memory is not writable, aborting.\n");
+    //    return 0;
+    //}
     printf("[*] HVCI is disabled.\n");
 
     HANDLE device = OpenDevice();

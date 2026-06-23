@@ -1,6 +1,6 @@
-# BYOVD — PdFwKrnl DSE Bypass
+# BYOVD — PDFWKRNL DSE Bypass
 
-A proof-of-concept BYOVD (Bring Your Own Vulnerable Driver) tool targeting Windows 10 that exploits the signed but vulnerable `PdFwKrnl.sys` driver to load an unsigned kernel driver by temporarily bypassing Driver Signature Enforcement (DSE).
+A proof-of-concept BYOVD (Bring Your Own Vulnerable Driver) tool targeting Windows 10 that exploits the signed but vulnerable `PDFWKRNL.sys` driver to load an unsigned kernel driver by temporarily bypassing Driver Signature Enforcement (DSE).
 
 ## How It Works
 
@@ -36,7 +36,7 @@ Then run the tool with the path to your unsigned driver and the service name to 
 | OS | Build |
 |---|---|
 | Microsoft Windows 11 Home | 10.0.26200 |
-| Microsoft Windows Server 2022 Standard Evaluation | 10.0.20348 |
+| Microsoft Windows Server 2022 Standard Evaluation | 10.0.20348 | 
 
 ## Requirements
 
